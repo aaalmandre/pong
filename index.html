@@ -1,0 +1,200 @@
+<!DOCTYPE HTML>
+
+  <html>
+
+    <head>
+
+      <script>
+
+	var canvas;
+
+	var canvasContext;
+
+	
+	//ball
+	var ballX;
+
+	var ballSpeedX;
+
+	var ballY;
+
+	var ballSpeedY;
+	var ballRadius;
+
+	//paddles
+	const PADDLE_HEIGHT = 100;
+	var paddle1Y;
+	var paddle2Y;
+
+	function initialize(){
+	  //ball
+	  ballX = canvas.width / 2;
+	  ballSpeedX = 5;
+
+	  ballY = canvas.height / 2;
+	  ballSpeedY = 4;
+	  ballRadius = 10;
+
+	  //paddles
+	  paddle1Y = (canvas.height / 2) - (PADDLE_HEIGHT / 2);
+	  paddle2Y = (canvas.height / 2) - (PADDLE_HEIGHT / 2);
+	}
+
+	function ballReset(){
+	  //get the direction of the ball before it was scored
+	  var ballDirection = Math.sign(ballSpeedX);
+	  ballX = canvas.width / 2;
+	  ballY = canvas.height / 2;
+
+	  //start the ball in the direction of the player who has just scored
+	  //ball speed is going to be between 5 and 10 in the x axis
+	  ballSpeedX = ((Math.random() * 5) + 5) * -ballDirection;
+
+	  //ball speed is going to be between -5 and 5 in the y axis
+	  ballSpeedY = (Math.random() * 10) - 5;
+	}
+
+	function calculateMousePos(evt){
+	  //evt.clientX and evt.clientY shows the mouseposition in the whole page, not just in the particular
+	  //element that we are interested in
+
+	  //rect.left shows the left side of rect relative to the currently visible part of the page
+	  //rect.top shows the top side of rect relative to the currently visible part of the page
+		
+	  var rect = canvas.getBoundingClientRect();
+	  var root = document.documentElement;
+	  var mouseX = evt.clientX - rect.left - root.scrollLeft;
+	  var mouseY = evt.clientY - rect.top - root.scrollTop;
+	  document.getElementById("demo").innerHTML = "("+ mouseY + ", " + rect.top + ")";
+	  document.getElementById("demo2").innerHTML = "("+ mouseY + ", " + rect.top + ")";
+	  return {
+	    x : mouseX,
+	    y : mouseY
+	  };
+	}
+
+	
+
+window.onload = function() {
+	
+	  canvas =  document.getElementById('gameCanvas');
+	  canvasContext = canvas.getContext('2d');
+	  initialize();
+
+	  var framesPerSecond = 60;
+
+	  setInterval(main, 1000 / framesPerSecond); //60 fps
+
+
+	  canvas.addEventListener('mousemove', function(evt) {
+							var mousePos = calculateMousePos(evt);
+							paddle1Y = mousePos.y - (PADDLE_HEIGHT / 2);
+							if(mousePos.y < PADDLE_HEIGHT / 2){
+							  paddle1Y = 0;
+							}
+							else if(mousePos.y > canvas.height - (PADDLE_HEIGHT / 2)){
+							  paddle1Y = canvas.height - PADDLE_HEIGHT;
+							}
+						});
+	}
+
+
+
+	function main(){
+
+	  updateScene();
+
+	  drawScene();
+
+	}
+
+	function updateScene(){
+
+	  //update ballX
+
+
+	  //if the ball goes out of bounds in either direction, reset it
+	  if(ballX >= canvas.width - ballRadius || ballX <= 0 + ballRadius){
+
+	    ballReset();
+	  }
+	  //otherwise the ball continues 
+	  ballX += ballSpeedX;
+
+
+	  //update ballY
+
+	  //if the ball goes out of bounds in either direction, bounce it
+	  if(ballY >= canvas.height - ballRadius || ballY <= 0 + ballRadius){
+
+	    ballSpeedY *= -1;
+
+	  }
+	  ballY += ballSpeedY;
+
+
+	}
+
+
+	
+function drawScene(){
+
+	
+	
+
+	
+  //draw black background
+
+	  colorRect(0,0,canvas.width,canvas.height,'black');
+
+
+
+	  //draw left paddle
+
+	  colorRect(0,paddle1Y,10,100,'white');
+
+	  //draw ball (rectangle)
+	  //colorRect(ballX,50,10,10,'white');
+
+	  //draw ball (circle)
+	  colorCircle(ballX, ballY, ballRadius, 0, Math.PI * 2, false, 'white');
+	  
+	
+}
+
+
+	function colorRect(leftX, topY, width, height, drawColor){
+	  canvasContext.fillStyle = drawColor;
+
+	  canvasContext.fillRect(leftX,topY,width,height);
+
+	}
+
+	function colorCircle(centerX, centerY, radius, drawColor){
+	  canvasContext.beginPath();
+	  canvasContext.arc(centerX, centerY, radius, 0 , 2 * Math.PI);
+    	  canvasContext.fillStyle = drawColor;
+	  //in this case the closePath() is not needed because the fill() will do it
+	  //canvasContext.closePath();
+    	  canvasContext.fill();	
+	}
+	
+      </script>
+
+    </head>
+
+    <body>
+      <p id="demo"></p>
+      
+<canvas id="gameCanvas" width="800" height="600" style="border:1px solid #d3d3d3;">
+
+        Your browser does not support the HTML5 canvas tag.
+      </canvas>
+
+
+
+	
+      <p id="demo2"></p>
+    </body>
+
+  </html>
