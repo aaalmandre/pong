@@ -1,23 +1,14 @@
 <!DOCTYPE HTML>
-
   <html>
-
     <head>
-
       <script>
-
 	var canvas;
-
 	var canvasContext;
-
 	
 	//ball
 	var ballX;
-
 	var ballSpeedX;
-
 	var ballY;
-
 	var ballSpeedY;
 	var ballRadius;
 
@@ -60,7 +51,7 @@
 
 	  //rect.left shows the left side of rect relative to the currently visible part of the page
 	  //rect.top shows the top side of rect relative to the currently visible part of the page
-		
+	  
 	  var rect = canvas.getBoundingClientRect();
 	  var root = document.documentElement;
 	  var mouseX = evt.clientX - rect.left - root.scrollLeft;
@@ -75,16 +66,13 @@
 
 	
 
-window.onload = function() {
-	
+	window.onload = function() {
 	  canvas =  document.getElementById('gameCanvas');
 	  canvasContext = canvas.getContext('2d');
 	  initialize();
 
 	  var framesPerSecond = 60;
-
 	  setInterval(main, 1000 / framesPerSecond); //60 fps
-
 
 	  canvas.addEventListener('mousemove', function(evt) {
 							var mousePos = calculateMousePos(evt);
@@ -98,59 +86,35 @@ window.onload = function() {
 						});
 	}
 
-
-
 	function main(){
-
 	  updateScene();
-
 	  drawScene();
-
 	}
 
 	function updateScene(){
-
 	  //update ballX
-
 
 	  //if the ball goes out of bounds in either direction, reset it
 	  if(ballX >= canvas.width - ballRadius || ballX <= 0 + ballRadius){
-
 	    ballReset();
 	  }
 	  //otherwise the ball continues 
 	  ballX += ballSpeedX;
 
-
 	  //update ballY
-
 	  //if the ball goes out of bounds in either direction, bounce it
 	  if(ballY >= canvas.height - ballRadius || ballY <= 0 + ballRadius){
-
 	    ballSpeedY *= -1;
-
 	  }
 	  ballY += ballSpeedY;
-
-
 	}
 
-
 	
-function drawScene(){
-
-	
-	
-
-	
-  //draw black background
-
+	function drawScene(){
+  	  //draw black background
 	  colorRect(0,0,canvas.width,canvas.height,'black');
 
-
-
 	  //draw left paddle
-
 	  colorRect(0,paddle1Y,10,100,'white');
 
 	  //draw ball (rectangle)
@@ -158,16 +122,11 @@ function drawScene(){
 
 	  //draw ball (circle)
 	  colorCircle(ballX, ballY, ballRadius, 0, Math.PI * 2, false, 'white');
-	  
-	
-}
-
+	}
 
 	function colorRect(leftX, topY, width, height, drawColor){
 	  canvasContext.fillStyle = drawColor;
-
 	  canvasContext.fillRect(leftX,topY,width,height);
-
 	}
 
 	function colorCircle(centerX, centerY, radius, drawColor){
@@ -180,21 +139,14 @@ function drawScene(){
 	}
 	
       </script>
-
     </head>
-
     <body>
       <p id="demo"></p>
       
-<canvas id="gameCanvas" width="800" height="600" style="border:1px solid #d3d3d3;">
-
+      <canvas id="gameCanvas" width="800" height="600" style="border:1px solid #d3d3d3;">
         Your browser does not support the HTML5 canvas tag.
       </canvas>
-
-
-
-	
+      
       <p id="demo2"></p>
     </body>
-
   </html>
