@@ -1,79 +1,124 @@
 <!DOCTYPE HTML>
-  <html>
-    <head>
-      <script>
+<html>
+<head>
+  <script>
 	var canvas;
 	var canvasContext;
 	
+	var gameOver;
+	
+	//score
+	const WINNING_SCORE = 5;
+	var player1score;
+	var player2score;
+	
 	//ball
+	const MAX_BALL_SPEED_Y = 8;
 	var ballX;
-	var ballSpeedX;
+	var ballVelocityX;
 	var ballY;
-	var ballSpeedY;
+	var ballVelocityY;
 	var ballRadius;
-
+	
+	//collision
+	var oldTime;
+	var canHit;
+	
 	//paddles
+	const AI_MAX_SPEED = 6;
 	const PADDLE_HEIGHT = 100;
+	const PADDLE_WIDTH = 10;
+	const PADDLE_X = 30;
 	var paddle1Y;
 	var paddle2Y;
-
+	
+	var aiRandomOffset = (Math.random() * PADDLE_HEIGHT) - (PADDLE_HEIGHT / 2);
+	
+	//*********************************************
+	//initialize
+	//*********************************************
 	function initialize(){
+	  gameOver = false;
+	  //score
+	  player1score = 0;
+	  player2score = 0;
 	  //ball
 	  ballX = canvas.width / 2;
-	  ballSpeedX = 5;
-
+	  ballVelocityX = 10;
 	  ballY = canvas.height / 2;
-	  ballSpeedY = 4;
+	  ballVelocityY = 4;
 	  ballRadius = 10;
-
+	  collisionTimer = 0;
 	  //paddles
 	  paddle1Y = (canvas.height / 2) - (PADDLE_HEIGHT / 2);
-	  paddle2Y = (canvas.height / 2) - (PADDLE_HEIGHT / 2);
+	  paddle2Y = paddle1Y;
+	  
+	  //time
+	  oldDate = new Date();
 	}
-
+	
+	//*********************************************
+	//ballReset
+	//*********************************************
 	function ballReset(){
 	  //get the direction of the ball before it was scored
-	  var ballDirection = Math.sign(ballSpeedX);
+	  var ballDirection = Math.sign(ballVelocityX);
 	  ballX = canvas.width / 2;
 	  ballY = canvas.height / 2;
-
 	  //start the ball in the direction of the player who has just scored
-	  //ball speed is going to be between 5 and 10 in the x axis
-	  ballSpeedX = ((Math.random() * 5) + 5) * -ballDirection;
-
-	  //ball speed is going to be between -5 and 5 in the y axis
-	  ballSpeedY = (Math.random() * 10) - 5;
+	  //ball speed is going to be between 8 and 11 in the x axis
+	  ballVelocityX = ((Math.random() * 3) + 8) * -ballDirection;
+	  //ball speed is going to be between -MAX_BALL_SPEED_Y and MAX_BALL_SPEED_Y in the y axis
+	  ballVelocityY = 0;//(Math.random() * MAX_BALL_SPEED_Y) - MAX_BALL_SPEED_Y / 2;
 	}
-
+		
+	//*********************************************
+	//calculateMousePos
+	//*********************************************
+	//-calculate the mouse position on the canvas
+	//-evt.clientX and evt.clientY shows the mouseposition 
+	// in the whole page, not just in the particular
+	// element that we are interested in.
+	//-rect.left shows the left side of rect relative to the currently visible part of the page
+	//-rect.top shows the top side of rect relative to the currently visible part of the page
+	//*********************************************
 	function calculateMousePos(evt){
-	  //evt.clientX and evt.clientY shows the mouseposition in the whole page, not just in the particular
-	  //element that we are interested in
-
-	  //rect.left shows the left side of rect relative to the currently visible part of the page
-	  //rect.top shows the top side of rect relative to the currently visible part of the page
-	  
 	  var rect = canvas.getBoundingClientRect();
 	  var root = document.documentElement;
 	  var mouseX = evt.clientX - rect.left - root.scrollLeft;
 	  var mouseY = evt.clientY - rect.top - root.scrollTop;
-	  document.getElementById("demo").innerHTML = "("+ mouseY + ", " + rect.top + ")";
-	  document.getElementById("demo2").innerHTML = "("+ mouseY + ", " + rect.top + ")";
+	  //document.getElementById("demo").innerHTML = "("+ mouseY + ", " + rect.top + ")";
+	  //document.getElementById("demo2").innerHTML = "("+ mouseY + ", " + rect.top + ")";
 	  return {
 	    x : mouseX,
 	    y : mouseY
 	  };
 	}
-
 	
-
+	//*********************************************
+	//handleMouseClick
+	//*********************************************
+	//restart the game on mouseclick
+	//*********************************************
+	function handleMouseClick(evt){
+	  if(gameOver){
+		initialize();
+	  }
+	}
+	
+	//*********************************************
+	//window.onload
+	//*********************************************
+	//when the page is loaded, initialize everything,
+	//set the refresh interval and call our main loop,
+	//add the 'mousemove' listener to control our paddle
+	//*********************************************
 	window.onload = function() {
 	  canvas =  document.getElementById('gameCanvas');
 	  canvasContext = canvas.getContext('2d');
 	  initialize();
-
 	  var framesPerSecond = 60;
 	  setInterval(main, 1000 / framesPerSecond); //60 fps
-
 	  canvas.addEventListener('mousemove', function(evt) {
 							var mousePos = calculateMousePos(evt);
 							paddle1Y = mousePos.y - (PADDLE_HEIGHT / 2);
@@ -84,51 +129,222 @@
 							  paddle1Y = canvas.height - PADDLE_HEIGHT;
 							}
 						});
+	  canvas.addEventListener('mousedown', handleMouseClick);
 	}
-
+	
+	//*********************************************
+	//main
+	//*********************************************
 	function main(){
 	  updateScene();
 	  drawScene();
 	}
-
-	function updateScene(){
-	  //update ballX
-
-	  //if the ball goes out of bounds in either direction, reset it
-	  if(ballX >= canvas.width - ballRadius || ballX <= 0 + ballRadius){
-	    ballReset();
-	  }
-	  //otherwise the ball continues 
-	  ballX += ballSpeedX;
-
-	  //update ballY
-	  //if the ball goes out of bounds in either direction, bounce it
-	  if(ballY >= canvas.height - ballRadius || ballY <= 0 + ballRadius){
-	    ballSpeedY *= -1;
-	  }
-	  ballY += ballSpeedY;
-	}
-
 	
+	//*********************************************
+	//detectCollision
+	//*********************************************
+	//detect collision between ball and the paddles
+	// returns 1 if it collides with paddle1
+	// returns 2 if it collides with paddle2
+	// returns 0 if there is no collision
+	//*********************************************
+	function detectCollision(){
+	  //since we use a bounding box without rotation, we only need the leftside and rightside X coordinate,
+	  //and the top and bottom Y coordinate of the ball and we can check on both sides if there is a collision
+	  var ballLeftX = ballX - ballRadius;
+	  var ballRightX = ballX + ballRadius;
+	  var ballTopY = ballY - ballRadius;
+	  var ballBottomY = ballY + ballRadius;
+	  
+	  //check if there is a collision with
+		    //left side of ball with right side of left paddle
+		if((ballLeftX <= PADDLE_X + PADDLE_WIDTH && (ballTopY <= paddle1Y + (PADDLE_HEIGHT) && ballBottomY >= paddle1Y )) &&
+		    //bit of cushion
+		    (ballLeftX >= PADDLE_X + PADDLE_WIDTH - ballRadius * 2)){
+			canHit = false;
+			return paddle1Y;
+			}
+		else if(
+			//right side of ball with left side of right paddle
+			(ballRightX >= canvas.width - PADDLE_X - PADDLE_WIDTH && (ballTopY <= paddle2Y + (PADDLE_HEIGHT) && ballBottomY >= paddle2Y )) &&
+			//bit of cushion
+		    (ballRightX <= canvas.width - PADDLE_X - PADDLE_WIDTH + ballRadius * 2))
+		{
+		  canHit = false;
+		  return paddle2Y;
+		}
+		//no collision
+		return null;
+	}
+	
+	//*********************************************
+	//aiMove
+	//*********************************************
+	//make the AI make a move
+	//*********************************************
+	function aiMove(){
+	  aiDirection = Math.sign(paddle2Y + (PADDLE_HEIGHT / 2) - ballY - aiRandomOffset);
+	  if(Math.abs(paddle2Y + (PADDLE_HEIGHT / 2) - ballY - aiRandomOffset) <= AI_MAX_SPEED){
+		paddle2Y = ballY - (PADDLE_HEIGHT / 2) + aiRandomOffset;
+	  }
+	  else{
+		paddle2Y -= AI_MAX_SPEED * aiDirection;
+	  }	  
+	  if(paddle2Y < 0){
+		paddle2Y = 0;
+	  }
+	  else if(paddle2Y > canvas.height - (PADDLE_HEIGHT)){
+		paddle2Y = canvas.height - PADDLE_HEIGHT;
+	  }
+	}
+	
+	//*********************************************
+	//checkWin
+	//*********************************************
+	//check if one of the players have won
+	//*********************************************
+	function checkWIN(){
+	  if(player1score == WINNING_SCORE || player2score == WINNING_SCORE){
+		gameOver = true;
+	  }
+	}
+	
+	//*********************************************
+	//updateScene
+	//*********************************************
+	//update ball position, check for collision, 
+	//move computer paddle
+	//*********************************************
+	function updateScene(){
+	  if(!gameOver){
+		  //update ballX
+		  //if the ball goes out of bounds in either direction, reset it
+		  if(ballX > canvas.width + ballRadius || ballX < 0 - ballRadius){
+			//get direction of ball to decide which side scored
+			if(ballVelocityX < 0){
+			  //computer scored
+			  player2score++;
+			}
+			else{
+			  player1score++;
+			}
+			checkWIN();
+			ballReset();
+		  }
+		  
+		  var newDate = new Date();
+		  //get the old seconds
+		  var oldMilliseconds = oldDate.getMilliseconds();
+		  var newMilliseconds = newDate.getMilliseconds();
+		  
+		  
+		  //if the old milliseconds is bigger than the new, it means that the milliseconds of current time started over from 0
+		  // just subtract 1000 and we can do everything as normal
+		  if(oldMilliseconds > newMilliseconds){
+			oldMilliseconds - 1000;
+		  }
+		  //if one tenth of a second has passed we can check for collision again
+		  if(oldMilliseconds < newMilliseconds + 50 ){
+			canHit = true;
+		  }
+		  
+		  //save the new date as the last one
+		  oldDate = newDate;
+		  
+		  //detect collision with paddles
+		  if(canHit){
+			var collidingPaddleY = detectCollision();
+			if(collidingPaddleY != null){
+			  //bounce the ball
+			  //the farther away from the center of the paddle the ball hits the paddle, the faster will it bounce off 
+			  // along the Y axis (this means it will go steeper up or down)
+			  ballVelocityY = (ballY - (collidingPaddleY + (PADDLE_HEIGHT / 2))) / (PADDLE_HEIGHT / 2) * MAX_BALL_SPEED_Y;
+			  ballVelocityX *= -1;
+			  
+			  if(collidingPaddleY == paddle1Y){
+				aiRandomOffset = (Math.random() * PADDLE_HEIGHT) - (PADDLE_HEIGHT / 2);
+			  }
+			  
+			}
+		  }
+		  
+		  //otherwise the ball continues 
+		  ballX += ballVelocityX;
+		  //update ballY
+		  //if the ball goes out of bounds in either direction, bounce it
+		  if(ballY >= canvas.height - ballRadius || ballY <= 0 + ballRadius){
+			ballVelocityY *= -1;
+		  }
+		  ballY += ballVelocityY;
+		  
+		  aiMove();
+		  }
+	}
+	
+	//*********************************************
+	//drawScene
+	//*********************************************
+	//draws everything to the screen
+	//*********************************************
 	function drawScene(){
   	  //draw black background
 	  colorRect(0,0,canvas.width,canvas.height,'black');
-
+	  
+	  //draw net
+	  canvasContext.strokeStyle='white';
+	  canvasContext.setLineDash([26, 22]);
+	  canvasContext.beginPath();
+	  canvasContext.moveTo(canvas.width / 2, 0);
+	  canvasContext.lineTo(canvas.width / 2, canvas.height);
+	  canvasContext.stroke();
+	  canvasContext.closePath();
+	  
 	  //draw left paddle
-	  colorRect(0,paddle1Y,10,100,'white');
-
-	  //draw ball (rectangle)
-	  //colorRect(ballX,50,10,10,'white');
-
-	  //draw ball (circle)
-	  colorCircle(ballX, ballY, ballRadius, 0, Math.PI * 2, false, 'white');
+	  colorRect(PADDLE_X,paddle1Y,PADDLE_WIDTH,PADDLE_HEIGHT,'white');
+	  
+	  //draw right paddle
+	  colorRect(canvas.width - PADDLE_X - PADDLE_WIDTH,paddle2Y,PADDLE_WIDTH,PADDLE_HEIGHT,'white');
+	  
+	  //draw player scores
+	  canvasContext.textAlign = "center";
+	  canvasContext.font="30px Verdana";
+	  canvasContext.fillText(player1score, 200, 100);		  
+	  canvasContext.fillText(player2score, 600, 100);	
+	  
+	  if(!gameOver){
+		//draw ball (rectangle)
+		//colorRect(ballX,50,10,10,'white');
+		//draw ball (circle)
+		colorCircle(ballX, ballY, ballRadius, 0, Math.PI * 2, false, 'white');
+	  }
+	  else{
+	    //draw winning message
+		canvasContext.font="30px Verdana";
+		if(player1score == WINNING_SCORE){
+		  canvasContext.fillText("You won", 400, 100);
+		}
+		else{
+		  canvasContext.fillText("Computer won", 400, 100);
+		}
+		canvasContext.fillText("Click to restart", 400, 200);
+	  }
 	}
-
+	
+	//*********************************************
+	//colorRect
+	//*********************************************
+	//draw a rectangle in a particular color
+	//*********************************************
 	function colorRect(leftX, topY, width, height, drawColor){
 	  canvasContext.fillStyle = drawColor;
 	  canvasContext.fillRect(leftX,topY,width,height);
 	}
-
+	
+	//*********************************************
+	//colorCircle
+	//*********************************************
+	//draw a circle in a particular color
+	//*********************************************
 	function colorCircle(centerX, centerY, radius, drawColor){
 	  canvasContext.beginPath();
 	  canvasContext.arc(centerX, centerY, radius, 0 , 2 * Math.PI);
@@ -138,15 +354,15 @@
     	  canvasContext.fill();	
 	}
 	
-      </script>
-    </head>
-    <body>
-      <p id="demo"></p>
+  </script>
+</head>
+<body>
+  <p id="demo"></p>
       
-      <canvas id="gameCanvas" width="800" height="600" style="border:1px solid #d3d3d3;">
-        Your browser does not support the HTML5 canvas tag.
-      </canvas>
+  <canvas id="gameCanvas" width="800" height="600" style="border:1px solid #d3d3d3;">
+    Your browser does not support the HTML5 canvas tag.
+  </canvas>
       
-      <p id="demo2"></p>
-    </body>
-  </html>
+  <p id="demo2"></p>
+</body>
+</html>
